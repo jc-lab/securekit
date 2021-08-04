@@ -1,0 +1,10 @@
+image: securekit-disk
+config:
+  binds:
+    - /dev:/dev
+  capabilities:
+    - CAP_SYS_ADMIN
+    - CAP_MKNOD
+  rootfsPropagation: shared
+  net: new
+  ipc: new

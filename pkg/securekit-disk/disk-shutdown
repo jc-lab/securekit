@@ -1,0 +1,24 @@
+#!/bin/bash
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --umount)
+            shift
+            umount $1
+            ;;
+        --luksClose)
+            shift
+            #TODO: vgchange -a n $1
+            # Device /dev/mapper/storage is still in use.
+            lsof
+            cryptsetup luksClose /dev/mapper/$1
+            ;;
+      *)
+            >&2 echo "invalid argument: $*"
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+exit 0

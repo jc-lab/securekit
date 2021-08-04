@@ -1,0 +1,36 @@
+# Contributor: Alexander Sack <asac@pantacor.com>
+# Maintainer: Alexander Sack <asac@pantacor.com>
+pkgname=tpm2-tools
+pkgver=5.1.1
+pkgrel=0
+pkgdesc="TPM2 Tools"
+url="https://github.com/tpm2-software/tpm2-tools/"
+arch="all"
+license="BSD-2-Clause"
+makedepends="tpm2-tss-dev openssl-dev curl-dev util-linux-dev libtool
+	autoconf automake"
+subpackages="$pkgname-bash-completion"
+source="https://github.com/tpm2-software/tpm2-tools/releases/download/$pkgver/tpm2-tools-$pkgver.tar.gz
+	dont-generate-manpages-without-pandoc.patch"
+options="!check"
+
+prepare() {
+	default_prepare
+
+	autoreconf -fi
+}
+
+build() {
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/usr
+	make
+}
+
+package() {
+	make DESTDIR="$pkgdir" install
+}
+
+sha512sums="4e094dcffb66103773d85e866ab9ba8db5d0f205ff9658e08fe14e8e41250570a7f7274b4048934adf256ea41650fa498fc3d6da2786adc241a4bf2e8f7bf78e  tpm2-tools-5.1.1.tar.gz
+2e0862c3c5d07cd40f655fa762a881a243fcf63c966f9867032057f7d7373fea94785929d8ef8bba8961bafa7d4549ebb3b90a09b15d6cfd8d3f08acfd488364  dont-generate-manpages-without-pandoc.patch"

@@ -1,0 +1,223 @@
+#!/bin/bash
+
+. /usr/bin/securekit-disk-functions.sh
+
+disk=$1
+shift
+
+dm_name=""
+partition_style="o"
+storage_mount_dir=""
+meta_mount_dir=""
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --name)
+            shift
+            dm_name="$1"
+            ;;
+        --help)
+            echo "$0 DEVICE --name DM_NAME [--gpt|--mbr]"
+            exit 0
+            ;;
+        --mbr)
+            partition_style="o"
+            ;;
+        --gpt)
+            partition_style="g"
+            ;;
+        --mount)
+            shift
+            storage_mount_dir="$1"
+            ;;
+        --mount-meta)
+            shift
+            meta_mount_dir="$1"
+            ;;
+      *)
+            >&2 echo "invalid argument: $*"
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+sfdisk -d $disk
+has_partition=$?
+
+temp_dir=/tmp/.init
+p1_dir=${meta_mount_dir:-/tmp/.p1}
+
+mkdir -p ${temp_dir} ${p1_dir}
+
+mount -t ramfs ramfs ${temp_dir}
+
+cd ${temp_dir}
+
+# TODO: REMOVE init
+backup_fs_key_file=${p1_dir}/backup_fs_key.asc
+backup_plain_key_file=${temp_dir}/backup_key.plain
+tpm_plain_key_file=${temp_dir}/tpm_slot_key.plain
+
+tpm_seal_handle=0x81000002
+
+function unsealKeyByTPM() {
+    local output=$1
+    set -e
+    tpm2_startauthsession --policy-session -S session.ctx
+    tpm2_policypcr -S session.ctx -l sha256:0,2,4,17
+    tpm2_unseal -p session:session.ctx -c ${tpm_seal_handle} -o ${output}
+    tpm2_flushcontext session.ctx
+}
+
+function sealKeyByTPM() {
+    local tpm_plain_key_file=$1
+    set -e
+    tpm2_startauthsession -S session.ctx
+    tpm2_policypcr -Q -S session.ctx -l sha256:0,2,4,17 -L pcrs.sha256.policy
+    tpm2_flushcontext session.ctx
+    rm session.ctx
+    tpm2_createprimary -C o -c tpm-primary.ctx
+    tpm2_startauthsession --hmac-session -c tpm-primary.ctx -S session.ctx
+    tpm2_create -g sha256 -u seal.pub -r seal.priv -i ${tpm_plain_key_file} -C tpm-primary.ctx -S session.ctx -L pcrs.sha256.policy
+    tpm2_load -C tpm-primary.ctx -u seal.pub -r seal.priv -n seal.name -c tpm-seal.ctx
+    tpm2_evictcontrol -C o -c tpm-seal.ctx ${tpm_seal_handle}
+    tpm2_flushcontext session.ctx
+    rm session.ctx
+}
+
+function failure() {
+    sleep 60
+    poweroff -f
+    exit 1
+}
+
+tpm2_pcrextend 17:sha256=b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c
+
+if [ ! $has_partition -eq 0 ]; then
+    # If empty disk
+    echo "========== SECUREKIT =========="
+    echo "DISK INITIALIZING..."
+    echo "This may take some time."
+
+    # generate keys
+    dd if=/dev/urandom bs=1 count=32 of=${backup_plain_key_file}
+    dd if=/dev/urandom bs=1 count=32 of=${tpm_plain_key_file}
+
+    # seal key by TPM
+    (sealKeyByTPM "${tpm_plain_key_file}")
+    seal_rc=$?
+    [ -e session.ctx ] && tpm2_flushcontext session.ctx
+
+    if [ ! $seal_rc -eq 0 ]; then
+        echo "****************************************"
+        echo "********** TPM SEAL FAILED!!! **********"
+        echo "****************************************"
+        failure
+    fi
+
+    # format
+    printf "${partition_style}\nn\np\n1\n\n+100M\nn\np\n2\n\n\np\nw\n" | fdisk $disk
+    mkfs.ext4 ${disk}1
+    mount ${disk}1 ${p1_dir}
+
+    # Copy TPM context
+    # cp tpm-primary.ctx ${p1_dir}/tpm-primary.ctx
+    # cp tpm-seal.ctx ${p1_dir}/tpm-seal.ctx
+
+    # backup key
+    gpg2 --recipient-file /fs_protector_key.public.asc --armor --output ${backup_fs_key_file} --encrypt ${backup_plain_key_file}
+
+    set +e
+
+    # luks format
+    cryptsetup -q --type luks2 --key-size 256 luksFormat ${disk}2 ${backup_plain_key_file}
+    cryptsetup -q luksAddKey --key-file=${backup_plain_key_file} ${disk}2 ${tpm_plain_key_file}
+    shred ${backup_plain_key_file}
+    
+    cryptsetup -q luksOpen --key-file=${tpm_plain_key_file} ${disk}2 "${dm_name}"
+    shred ${tpm_plain_key_file}
+
+    mkfs.ext4 "/dev/mapper/${dm_name}"
+else
+    mount ${disk}1 ${p1_dir}
+    
+    # unseal key by TPM
+    tpm2_pcrread sha256
+    # "${p1_dir}/tpm-seal.ctx"
+    (unsealKeyByTPM "${tpm_plain_key_file}")
+    unseal_rc=$?
+
+    if [ $unseal_rc -eq 0 ]; then
+        cryptsetup -q luksOpen --key-file=${tpm_plain_key_file} ${disk}2 "${dm_name}"
+        shred ${tpm_plain_key_file}
+
+        echo "*******************************************"
+        echo "********** TPM UNSEAL SUCCESS!!! **********"
+        echo "*******************************************"
+    else
+        [ -e ${tpm_plain_key_file} ] && shred ${tpm_plain_key_file}
+
+        echo "******************************************"
+        echo "********** TPM UNSEAL FAILED!!! **********"
+        echo "******************************************"
+
+        echo "Finding fs_protector_key.private.asc"
+        result_lines=$(find_volume_by_file "fs_protector_key.private.asc")
+        result_rc=$?
+
+        if [ ! $result_rc -eq 0 ]; then
+            echo "Could not find 'fs_protector_key.private.asc' file:"
+            blkid
+            failure
+        fi
+
+        mount_path=$(echo "${result_lines}" | cut -d$'\n' -f1)
+        found_file=$(echo "${result_lines}" | cut -d$'\n' -f2)
+
+        # seal key by TPM
+        dd if=/dev/urandom bs=1 count=32 of=${tpm_plain_key_file}
+        (sealKeyByTPM "${tpm_plain_key_file}")
+        seal_rc=$?
+        [ -e session.ctx ] && tpm2_flushcontext session.ctx
+        
+        if [ ! $seal_rc -eq 0 ]; then
+            echo "****************************************"
+            echo "********** TPM SEAL FAILED!!! **********"
+            echo "****************************************"
+            failure
+        fi
+
+        sq decrypt --recipient-key ${found_file} ${backup_fs_key_file} > ${backup_plain_key_file}
+        cryptsetup luksKillSlot --key-file=${backup_plain_key_file} ${disk}2 1
+        cryptsetup -q luksAddKey --key-file=${backup_plain_key_file} ${disk}2 ${tpm_plain_key_file}
+        shred ${tpm_plain_key_file}
+        cryptsetup -q luksOpen --key-file=${tpm_plain_key_file} ${disk}2 "${dm_name}"
+        shred ${backup_plain_key_file}
+
+        umount ${mount_path}
+    fi
+fi
+
+if [ -n "${storage_mount_dir}" ]; then
+    mkdir -p ${storage_mount_dir}
+    mount "/dev/mapper/${dm_name}" "${storage_mount_dir}"
+fi
+
+sync
+
+[ -e "${backup_plain_key_file}" ] && shred -f ${backup_plain_key_file}
+
+cd /
+
+umount ${temp_dir}
+
+if [ -z "${meta_mount_dir}" ]; then
+    umount ${p1_dir}
+else
+   mount -o remount,ro ${meta_mount_dir}
+fi
+
+sync
+
+exit 0

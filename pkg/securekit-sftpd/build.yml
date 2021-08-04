@@ -1,0 +1,11 @@
+image: securekit-sftpd
+config:
+  binds:
+    - /root/:/root/
+    - /etc/resolv.conf:/etc/resolv.conf:ro
+  capabilities:
+    - CAP_NET_BIND_SERVICE
+    - CAP_SYS_CHROOT
+    - CAP_SETGID
+    - CAP_SETUID
+    - CAP_CHOWN

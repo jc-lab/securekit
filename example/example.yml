@@ -1,0 +1,108 @@
+kernel:
+  image: linuxkit/kernel:5.12.14
+  cmdline: "console=tty0 console=ttyS0 console=ttyAMA0 console=ttysclp0"
+init:
+  - linuxkit/init:78fb57c7da07c4e43c3a37b27755581da087a3b6
+  - linuxkit/runc:bf1e0c61fb4678d6428d0aabbd80db5ea24e4d4d
+  - linuxkit/containerd:cc02c2af9c928c2faeccbe4edc78bd297ad91866
+  - linuxkit/ca-certificates:4df823737c9bf6a9564b736f1a19fd25d60e909a
+onboot:
+  - name: sysctl
+    image: linuxkit/sysctl:02d2bd74509fd063857ceb4c4f502f09ee4f2e0a
+  - name: rngd1
+    image: linuxkit/rngd:bdabfe138f05f7d48396d2f435af16f5a6ccaa45
+    command: ["/sbin/rngd", "-1"]
+    binds:
+      - /dev:/dev
+
+  # REQUIRED
+  - name: usb-storage
+    image: linuxkit/modprobe:944769462b9d10b1b1506498d3eb03dcc5416f7f
+    command: ["modprobe", "usb_storage"]
+  - name: format
+    image: jclab/securekit-disk:latest
+    command: ["/usr/bin/securekit-disk-init", "/dev/sda", "--name", "storage", "--mbr", "--mount", "/var/storage", "--mount-meta", "/var/boot"]
+    binds:
+      - /dev:/dev
+      - /var:/var
+      - /fs_protector_key.public.asc:/fs_protector_key.public.asc:ro
+      - /tpm-issuers.pem:/tpm-issuers.pem:ro
+  
+  # REQUIRED
+  - name: init-sftpd
+    image: jclab/securekit-sftpd:latest
+    command: ["/usr/bin/init-ssh.sh", "/var/storage"]
+    binds:
+      - /var/storage:/var/storage
+onshutdown:
+  # REQUIRED
+  - name: storage-unmount
+    image: jclab/securekit-disk:latest
+    command: ["/usr/bin/disk-shutdown", "--umount", "/var/boot", "--umount", "/var/storage", "--luksClose", "storage"]
+    binds:
+      - /dev:/dev
+      - /var:/var
+services:
+  - name: rngd
+    image: linuxkit/rngd:bdabfe138f05f7d48396d2f435af16f5a6ccaa45
+    binds:
+      - /dev:/dev
+  - name: dhcpcd
+    image: linuxkit/dhcpcd:1033f340e2d42f86a60aab70752346f0045ea388
+    
+  # REQUIRED
+  - name: sftpd
+    image: jclab/securekit-sftpd:latest
+    binds:
+      - /etc/resolv.conf:/etc/resolv.conf:ro
+      - /var/storage/etc/ssh:/etc/ssh:ro
+      - /root/.ssh:/root/.ssh
+      - /var/log:/root/log:ro
+      - /var/boot:/root/boot:ro
+    capabilities:
+      - CAP_NET_BIND_SERVICE
+      - CAP_SYS_CHROOT
+      - CAP_SETGID
+      - CAP_SETUID
+      - CAP_CHOWN
+  - name: testing
+    image: jclab/securekit-disk:latest
+    command: ["/bin/sh", "-c", "while [ 1 ]; do sleep 1; done"]
+    binds:
+      - /dev:/dev
+      - /var:/var
+      - /fs_protector_key.public.asc:/fs_protector_key.public.asc:ro
+  - name: getty
+    image: linuxkit/getty:ed32c71531f5998aa510847bb07bd847492d4101
+    env:
+      - INSECURE=true
+    binds:
+      - /etc/resolv.conf:/etc/resolv.conf
+      - /run:/run
+      - /tmp:/tmp
+      - /etc:/hostroot/etc
+      - /usr/bin/ctr:/usr/bin/ctr
+      - /usr/bin/runc:/usr/bin/runc
+      - /containers:/containers
+      - /var/log:/var/log
+      - /var/lib/containerd:/var/lib/containerd
+      - /dev:/dev
+      - /sys:/sys
+      - /var/boot:/var/boot
+      - /var/storage:/var/storage
+files:
+  - path: root/.ssh/authorized_keys
+    source: authorized_keys
+    mode: "0400"
+    optional: true
+  - path: /fs_protector_key.public.asc
+    source: fs_protector_key.public.asc
+    mode: "0400"
+    optional: false
+  - path: /tpm-issuers.pem
+    source: tpm-issuers.pem
+    mode: "0444"
+    optional: true
+#trust:
+#  org:
+#    - linuxkit
