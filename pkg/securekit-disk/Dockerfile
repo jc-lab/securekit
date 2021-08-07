@@ -93,14 +93,14 @@ RUN cp /packages/alpine-package@justnow.com-*.pub /etc/apk/keys/ && \
     apk add --no-cache --initdb -p /out --allow-untrusted \
     /packages/tpm2-tools-*.apk
 
-COPY ["securekit-disk-init", "disk-shutdown", "securekit-disk-functions.sh", "/out/usr/bin/"]
+ADD "opt/" "/out/opt/"
 
 # Remove apk residuals
 # Cleanup
 RUN rm -rf /out/etc/apk /out/lib/apk /out/var/cache && \
     rm -rf /out/usr/share && \
     rm -rf /out/usr/include && \
-    chmod +x /out/usr/bin/*
+    find /out/opt/securekit/ -type f -name "*.sh" | grep 'bin/' | xargs chmod 555
 
 FROM scratch
 ENTRYPOINT []

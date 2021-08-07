@@ -1,6 +1,8 @@
 #!/bin/bash
 
-. /usr/bin/securekit-disk-functions.sh
+. /opt/securekit/share/securekit-disk-functions.sh
+
+info "========== SECUREKIT =========="
 
 disk=$1
 shift
@@ -41,6 +43,8 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+info "DISK: $disk"
 
 sfdisk -d $disk
 has_partition=$?
@@ -87,18 +91,19 @@ function sealKeyByTPM() {
 }
 
 function failure() {
+    /bin/bash
     sleep 60
     poweroff -f
+    info "PLEASE POWER OFF!!!"
+    while [ 1 ]; do
+        sleep 1
+    done
     exit 1
 }
 
-tpm2_pcrextend 17:sha256=b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c
-
 if [ ! $has_partition -eq 0 ]; then
     # If empty disk
-    echo "========== SECUREKIT =========="
-    echo "DISK INITIALIZING..."
-    echo "This may take some time."
+    info "DISK INITIALIZING... This may take some time."
 
     # generate keys
     dd if=/dev/urandom bs=1 count=32 of=${backup_plain_key_file}
@@ -110,9 +115,7 @@ if [ ! $has_partition -eq 0 ]; then
     [ -e session.ctx ] && tpm2_flushcontext session.ctx
 
     if [ ! $seal_rc -eq 0 ]; then
-        echo "****************************************"
-        echo "********** TPM SEAL FAILED!!! **********"
-        echo "****************************************"
+        info "********** TPM SEAL FAILED!!! **********"
         failure
     fi
 
@@ -128,8 +131,6 @@ if [ ! $has_partition -eq 0 ]; then
     # backup key
     gpg2 --recipient-file /fs_protector_key.public.asc --armor --output ${backup_fs_key_file} --encrypt ${backup_plain_key_file}
 
-    set +e
-
     # luks format
     cryptsetup -q --type luks2 --key-size 256 luksFormat ${disk}2 ${backup_plain_key_file}
     cryptsetup -q luksAddKey --key-file=${backup_plain_key_file} ${disk}2 ${tpm_plain_key_file}
@@ -142,9 +143,6 @@ if [ ! $has_partition -eq 0 ]; then
 else
     mount ${disk}1 ${p1_dir}
     
-    # unseal key by TPM
-    tpm2_pcrread sha256
-    # "${p1_dir}/tpm-seal.ctx"
     (unsealKeyByTPM "${tpm_plain_key_file}")
     unseal_rc=$?
 
@@ -152,23 +150,19 @@ else
         cryptsetup -q luksOpen --key-file=${tpm_plain_key_file} ${disk}2 "${dm_name}"
         shred ${tpm_plain_key_file}
 
-        echo "*******************************************"
-        echo "********** TPM UNSEAL SUCCESS!!! **********"
-        echo "*******************************************"
+        info "********** TPM UNSEAL SUCCESS!!! **********"
     else
         [ -e ${tpm_plain_key_file} ] && shred ${tpm_plain_key_file}
 
-        echo "******************************************"
-        echo "********** TPM UNSEAL FAILED!!! **********"
-        echo "******************************************"
+        info "********** TPM UNSEAL FAILED!!! **********"
 
         echo "Finding fs_protector_key.private.asc"
-        result_lines=$(find_volume_by_file "fs_protector_key.private.asc")
+        result_lines=$(find_volume_by_file "fs_protector_key.private.asc" "${disk}")
         result_rc=$?
 
         if [ ! $result_rc -eq 0 ]; then
             echo "Could not find 'fs_protector_key.private.asc' file:"
-            blkid
+            info_execute blkid
             failure
         fi
 
@@ -182,9 +176,7 @@ else
         [ -e session.ctx ] && tpm2_flushcontext session.ctx
         
         if [ ! $seal_rc -eq 0 ]; then
-            echo "****************************************"
-            echo "********** TPM SEAL FAILED!!! **********"
-            echo "****************************************"
+            info "********** TPM SEAL FAILED!!! **********"
             failure
         fi
 

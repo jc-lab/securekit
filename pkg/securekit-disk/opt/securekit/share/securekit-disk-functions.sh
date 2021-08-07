@@ -44,7 +44,7 @@ function find_volume_by_file() {
         fi
 
         rmdir ${mount_path}
-    done <<< "$(blkid | egrep -v '/(loop|ram|fd|md|nbd)')"
+    done <<< "$(blkid | egrep -v '/(loop|ram|fd|md|nbd)' | grep -v ${exclude_device})"
 
     return 1
 }
