@@ -1,0 +1,45 @@
+diff --git a/sq/src/commands/decrypt.rs b/sq/src/commands/decrypt.rs
+index 5a8a038e..b68ca57d 100644
+--- a/sq/src/commands/decrypt.rs
++++ b/sq/src/commands/decrypt.rs
+@@ -36,6 +36,13 @@ struct Helper<'a> {
+     dumper: Option<PacketDumper>,
+ }
+ 
++fn prompt_password_ex(prompt: Option<&str>) -> ::std::io::Result<String> {
++  if let Some(prompt) = prompt {
++    return rpassword::prompt_password_stderr(prompt)
++  }
++  return rpassword::read_password()
++}
++
+ impl<'a> Helper<'a> {
+     fn new(config: &Config<'a>,
+            signatures: usize, certs: Vec<Cert>, secrets: Vec<Cert>,
+@@ -165,7 +172,7 @@ impl<'a> DecryptionHelper for Helper<'a> {
+                         break key.clone().into_keypair().unwrap();
+                     }
+ 
+-                    let p = rpassword::read_password_from_tty(Some(
++                    let p = prompt_password_ex(Some(
+                         &format!(
+                             "Enter password to decrypt key {}: ",
+                             self.key_hints.get(&keyid).unwrap())))?.into();
+@@ -224,7 +231,7 @@ impl<'a> DecryptionHelper for Helper<'a> {
+                         break key.clone().into_keypair().unwrap();
+                     }
+ 
+-                    let p = rpassword::read_password_from_tty(Some(
++                    let p = prompt_password_ex(Some(
+                         &format!(
+                             "Enter password to decrypt key {}: ",
+                             self.key_hints.get(&keyid).unwrap())))?.into();
+@@ -255,7 +262,7 @@ impl<'a> DecryptionHelper for Helper<'a> {
+         // Finally, try to decrypt using the SKESKs.
+         loop {
+             let password =
+-                rpassword::read_password_from_tty(Some(
++                prompt_password_ex(Some(
+                     "Enter password to decrypt message: "))?.into();
+ 
+             for skesk in skesks {

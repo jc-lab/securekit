@@ -57,14 +57,16 @@ RUN mkdir -p /work/packages && \
 FROM alpine@sha256:def822f9851ca422481ec6fee59a9966f12b351c62ccb9aca841526ffaa9f748 as sequoia
 RUN apk update && \
     apk add \
-    bash git cargo \
+    bash git cargo patch \
     sqlite-dev openssl-dev nettle-dev clang-dev
 RUN mkdir -p /work && \
     cd /work && \
     git clone https://gitlab.com/sequoia-pgp/sequoia.git && \
     cd sequoia && \
     git checkout -f 7bde618ccdd7d03cdb115f558e919219b0910319
+COPY [ "sq-decrypt-stdin.patch", "/work/sequoia/" ]
 RUN cd /work/sequoia && \
+    patch -p1 < sq-decrypt-stdin.patch && \
     CARGO_TARGET_DIR=target cargo build -p sequoia-sq --release && \
     install --strip -D --target-directory /out/usr/bin \
     target/release/sq
@@ -78,7 +80,8 @@ RUN apk add --no-cache --initdb -p /out  \
     e2fsprogs \
     sfdisk \
     util-linux \
-    gnupg
+    gnupg \
+    libgcc
 
 COPY --from=builder "/work/packages" "/packages"
 
@@ -94,6 +97,7 @@ RUN cp /packages/alpine-package@justnow.com-*.pub /etc/apk/keys/ && \
     /packages/tpm2-tools-*.apk
 
 ADD "opt/" "/out/opt/"
+COPY "sshd_config" "/out/etc/ssh/sshd_config"
 
 # Remove apk residuals
 # Cleanup
@@ -107,6 +111,10 @@ ENTRYPOINT []
 WORKDIR /
 COPY --from=mirror /out/ /
 COPY --from=sequoia /out/ /
+RUN adduser -s /opt/securekit/bin/remote-shell.sh -D manager && \
+    mkdir -p /home/manager/.ssh && \
+    chown manager:manager -R /home/manager/ && \
+    sed -i -e 's/manager:!/manager:*/g' /etc/shadow
 
 # SEE https://github.com/linuxkit/linuxkit/blob/master/pkg/dm-crypt/crypto.sh
 # https://en.opensuse.org/Software_TPM_Emulator_For_QEMU

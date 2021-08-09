@@ -1,10 +1,24 @@
 function info() {
     echo "$*" | tee /dev/kmsg
-    >&2 echo "$*"
 }
 
 function info_execute() {
-    exec "$@" | tee /dev/kmsg
+    stderr_file=$(mktemp /tmp/run-stderr.XXXXXXXX)
+    (exec "$@" | tee /dev/kmsg 2>${stderr_file}; return ${PIPESTATUS[0]})
+    rc=$?
+    [ -s ${stderr_file} ] && cat ${stderr_file} | tee /dev/kmsg >/dev/stderr
+    rm ${stderr_file}
+    return $rc
+}
+
+function info_func() {
+    stderr_file=$(mktemp /tmp/run-stderr.XXXXXXXX)
+    info "$@"
+    ("$@" | tee /dev/kmsg 2>${stderr_file}; return ${PIPESTATUS[0]})
+    rc=$?
+    [ -s ${stderr_file} ] && cat ${stderr_file} | tee /dev/kmsg >/dev/stderr
+    rm ${stderr_file}
+    return $rc
 }
 
 function find_volume_by_file() {
@@ -47,4 +61,22 @@ function find_volume_by_file() {
     done <<< "$(blkid | egrep -v '/(loop|ram|fd|md|nbd)' | grep -v ${exclude_device})"
 
     return 1
+}
+
+function interactive_ready() {
+    info "Ready interactive..."
+    for tty_name in $(cat /sys/class/tty/console/active); do
+        setsid /bin/bash -c "su manager <> /dev/${tty_name}>&0 2>&1" &
+    done
+    until [ -f /tmp/remote-tty.txt ]; do
+        sleep 0.5
+    done
+    tty_dev=$(cat /tmp/remote-tty.txt)
+    info "Start interactive on ${tty_dev}"
+    sleep 0.5
+}
+
+function interactive_execute() {
+    local tty_dev=$(cat /tmp/remote-tty.txt)
+    (exec "$@" <> ${tty_dev}>&0 2>&1)
 }

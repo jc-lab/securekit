@@ -14,28 +14,34 @@ onboot:
     command: ["/sbin/rngd", "-1"]
     binds:
       - /dev:/dev
+  - name: dhcpcd
+    image: linuxkit/dhcpcd:1033f340e2d42f86a60aab70752346f0045ea388
+    command: ["/sbin/dhcpcd", "--nobackground", "-f", "/dhcpcd.conf", "-1"]
 
-  # REQUIRED
+  # ========== REQUIRED FOR SECUREKIT START ==========
+  # NEEDED FOR KEY RECOVERY
   - name: usb-storage
     image: linuxkit/modprobe:944769462b9d10b1b1506498d3eb03dcc5416f7f
     command: ["modprobe", "usb_storage"]
+  # NEEDED FOR FORMAT or MOUNT
   - name: format
     image: jclab/securekit-disk:latest
-    command: ["/usr/bin/securekit-disk-init", "/dev/sda", "--name", "storage", "--mbr", "--mount", "/var/storage", "--mount-meta", "/var/boot"]
+    command: ["/opt/securekit/sbin/disk-init", "/dev/sda", "--name", "storage", "--mbr", "--mount", "/var/storage", "--mount-meta", "/var/boot"]
     binds:
       - /dev:/dev
       - /var:/var
+      - /root/.ssh/authorized_keys:/manager_authorized_keys:ro
       - /fs_protector_key.public.asc:/fs_protector_key.public.asc:ro
       - /tpm-issuers.pem:/tpm-issuers.pem:ro
-  
-  # REQUIRED
+  # NEEDED FOR KEY BACKUP
   - name: init-sftpd
     image: jclab/securekit-sftpd:latest
     command: ["/usr/bin/init-ssh.sh", "/var/storage"]
     binds:
       - /var/storage:/var/storage
+  # ========== REQUIRED FOR SECUREKIT END ==========
 onshutdown:
-  # REQUIRED
+  # ========== REQUIRED FOR SECUREKIT ==========
   - name: storage-unmount
     image: jclab/securekit-disk:latest
     command: ["/usr/bin/disk-shutdown", "--umount", "/var/boot", "--umount", "/var/storage", "--luksClose", "storage"]
@@ -50,7 +56,7 @@ services:
   - name: dhcpcd
     image: linuxkit/dhcpcd:1033f340e2d42f86a60aab70752346f0045ea388
     
-  # REQUIRED
+  # NEEDED FOR KEY BACKUP
   - name: sftpd
     image: jclab/securekit-sftpd:latest
     binds:
@@ -65,13 +71,7 @@ services:
       - CAP_SETGID
       - CAP_SETUID
       - CAP_CHOWN
-  - name: testing
-    image: jclab/securekit-disk:latest
-    command: ["/bin/sh", "-c", "while [ 1 ]; do sleep 1; done"]
-    binds:
-      - /dev:/dev
-      - /var:/var
-      - /fs_protector_key.public.asc:/fs_protector_key.public.asc:ro
+
   - name: getty
     image: linuxkit/getty:ed32c71531f5998aa510847bb07bd847492d4101
     env:
@@ -89,12 +89,14 @@ services:
       - /dev:/dev
       - /sys:/sys
       - /var/boot:/var/boot
-      - /var/storage:/var/storage
+      - /var:/var
 files:
-  - path: root/.ssh/authorized_keys
+  # SSH PUBLIC KEY FOR KEY BACKUP TO REMOTE
+  - path: /root/.ssh/authorized_keys
     source: authorized_keys
     mode: "0400"
-    optional: true
+    optional: false
+  # PGP FS_PROTECTOR_KEY FOR KEY BACKUP TO LOCAL
   - path: /fs_protector_key.public.asc
     source: fs_protector_key.public.asc
     mode: "0400"
