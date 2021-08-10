@@ -208,7 +208,6 @@ sync
 [ -e "${backup_plain_key_file}" ] && shred -f ${backup_plain_key_file}
 
 cd /
-info_execute lsof
 info_execute umount ${temp_dir}
 
 if [ -z "${meta_mount_dir}" ]; then

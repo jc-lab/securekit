@@ -97,7 +97,6 @@ RUN cp /packages/alpine-package@justnow.com-*.pub /etc/apk/keys/ && \
     /packages/tpm2-tools-*.apk
 
 ADD "opt/" "/out/opt/"
-COPY "sshd_config" "/out/etc/ssh/sshd_config"
 
 # Remove apk residuals
 # Cleanup

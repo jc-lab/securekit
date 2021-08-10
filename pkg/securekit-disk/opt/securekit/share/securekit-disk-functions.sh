@@ -13,7 +13,6 @@ function info_execute() {
 
 function info_func() {
     stderr_file=$(mktemp /tmp/run-stderr.XXXXXXXX)
-    info "$@"
     ("$@" | tee /dev/kmsg 2>${stderr_file}; return ${PIPESTATUS[0]})
     rc=$?
     [ -s ${stderr_file} ] && cat ${stderr_file} | tee /dev/kmsg >/dev/stderr
