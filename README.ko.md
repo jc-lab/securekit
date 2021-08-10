@@ -8,6 +8,10 @@ SecureKit은 [LinuxKit](https://github.com/linuxkit/linuxkit)으로 만들어지
 
 See [docs/tpm-mitm-protection.md](docs/tpm-mitm-protection.md)
 
+# 빠른 시작
+
+See [docs/quick-start.md](docs/quick-start.md)
+
 # 목적
 
 - (LinuxKit을 사용함으로써) 기본적으로 원격 및 로컬 콘솔을 통한 접근은 금지합니다.
@@ -34,12 +38,13 @@ See [docs/tpm-mitm-protection.md](docs/tpm-mitm-protection.md)
 
 [이미지 생성]
 
-- 부팅 파티션에 서명키의 공개키를 포함한 grub 이미지를 만들어 포함합니다.
-- 이미지의 해시를 서명한 데이터를 부팅 파티션에 포함합니다.
+- systemd-boot의 linux efi stub를 통해 linuxkit 이미지를 단일 efi 실행 파일로 만듭니다.
+- grub 등을 사용하여 efi와 initrd를 분리할 수도 있지만 커널과 initrd를 하나의 efi 파일로 만들면 상위 부트로더(Motherboard's UEFI Firmware)가 자동으로 PCR에 extend하여 손쉽게 kernel, cmdline, initrd에 대해 measured boot가 가능합니다. 
+- (직접 해야 함) secure boot 인증서로 efi를 서명 합니다.
 
 [이미지 검증]
 
-- grub 에서 자체에 포함된 서명키로 initrd를 검증하고 이로 부팅합니다.
+- secure boot 과정을 통해 UEFI Firmware가 서명을 확인합니다. 이것은 securekit이 아닌 메인보드의 펌웨어에서 동작합니다.
 - initrd.img 에서 TPM을 통해 현재 PCR값으로 봉인된 암호키를 추출 해 데이터 디스크를 마운트 합니다.
 
 ### 부팅 과정 변경을 통한 해킹 방지

@@ -8,6 +8,10 @@ It is still vulnerable to TPM MITM attacks.
 
 See [docs/tpm-mitm-protection.md](docs/tpm-mitm-protection.md)
 
+# Quick Start
+
+See [docs/quick-start.md](docs/quick-start.md)
+
 # Please translate!
 
 See [README.ko.md](README.ko.md)
