@@ -1,0 +1,12 @@
+#!/bin/bash
+
+INPUT_FILE=$1
+OUTPUT_FILE=$2
+
+# Enter your EFI sign command.
+
+# It is for just a test
+cp $INPUT_FILE $OUTPUT_FILE
+
+exit 0
+
