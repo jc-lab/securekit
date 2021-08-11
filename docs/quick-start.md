@@ -12,8 +12,6 @@
 
 ### 3. Build linuxkit image
 
-* TODO: BUILD GRUB IMAGE WITH YOUR SECURE BOOT KEY
-
 ```bash
 $ linuxkit pkg build -network -org jclab pkg/securekit-sftpd
 $ linuxkit pkg build -network -org jclab pkg/securekit-disk

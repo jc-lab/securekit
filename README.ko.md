@@ -38,8 +38,8 @@ See [docs/quick-start.md](docs/quick-start.md)
 
 [이미지 생성]
 
-- systemd-boot의 linux efi stub를 통해 linuxkit 이미지를 단일 efi 실행 파일로 만듭니다.
-- grub 등을 사용하여 efi와 initrd를 분리할 수도 있지만 커널과 initrd를 하나의 efi 파일로 만들면 상위 부트로더(Motherboard's UEFI Firmware)가 자동으로 PCR에 extend하여 손쉽게 kernel, cmdline, initrd에 대해 measured boot가 가능합니다. 
+- systemd-boot의 [linux efi stub](https://github.com/jc-lab/systemd-boot-efi)을 통해 linuxkit 이미지를 단일 efi 실행 파일로 만듭니다.
+- grub 등을 사용하여 efi와 initrd를 분리할 수도 있지만 Kernel과 initrd를 하나의 efi 파일로 만들면 상위 부트로더(Motherboard's UEFI Firmware)가 자동으로 PCR에 extend하여 손쉽게 kernel, cmdline, initrd에 대해 measured boot가 가능합니다.
 - (직접 해야 함) secure boot 인증서로 efi를 서명 합니다.
 
 [이미지 검증]
