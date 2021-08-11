@@ -6,7 +6,8 @@ SecureKit은 [LinuxKit](https://github.com/linuxkit/linuxkit)으로 만들어지
 
 아직 TPM MITM에 취약합니다.
 
-See [docs/tpm-mitm-protection.md](docs/tpm-mitm-protection.md)
+* See [docs/tpm-mitm-protection.md](docs/tpm-mitm-protection.md)
+* See also [How can I prevent MITM attacks for unsealing?](https://lists.01.org/hyperkitty/list/tpm2@lists.01.org/thread/ETZM6ECYGPWBNZGTPQJVUGJJ5U5YZJCV/)
 
 # 빠른 시작
 

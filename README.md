@@ -6,7 +6,8 @@ SecureKit self-verifies the integrity of the image itself through the TPM for im
 
 It is still vulnerable to TPM MITM attacks.
 
-See [docs/tpm-mitm-protection.md](docs/tpm-mitm-protection.md)
+* See [docs/tpm-mitm-protection.md](docs/tpm-mitm-protection.md)
+* See also [How can I prevent MITM attacks for unsealing?](https://lists.01.org/hyperkitty/list/tpm2@lists.01.org/thread/ETZM6ECYGPWBNZGTPQJVUGJJ5U5YZJCV/)
 
 # Quick Start
 
