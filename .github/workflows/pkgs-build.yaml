@@ -1,0 +1,20 @@
+name: pkgs build
+on: [push, pull_request]
+jobs:
+  push_to_registry:
+    name: build linuxkit package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Istall linuxkit
+        run: mkdir -p build && curl -L -o build/linuxkit https://github.com/linuxkit/linuxkit/releases/download/v0.8/linuxkit-linux-amd64 && chmod +x build/linuxkit
+      - name: Set env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/v}" >> $GITHUB_ENV
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Build Packages
+        run: |
+           build/linuxkit pkg build --hash-path . -network -org jclab pkg/securekit-sftpd
+           build/linuxkit pkg build --hash-path . -network -org jclab pkg/securekit-disk
+
