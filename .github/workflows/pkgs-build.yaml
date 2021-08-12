@@ -15,6 +15,6 @@ jobs:
         uses: docker/setup-buildx-action@v1
       - name: Build Packages
         run: |
-           build/linuxkit pkg build --hash-path . -network -org jclab pkg/securekit-sftpd
-           build/linuxkit pkg build --hash-path . -network -org jclab pkg/securekit-disk
+           build/linuxkit pkg build -network -org jclab pkg/securekit-sftpd
+           build/linuxkit pkg build -network -org jclab pkg/securekit-disk
 
