@@ -3,18 +3,20 @@ function info() {
 }
 
 function info_execute() {
-    stderr_file=$(mktemp /tmp/run-stderr.XXXXXXXX)
-    (exec "$@" | tee /dev/kmsg 2>${stderr_file}; return ${PIPESTATUS[0]})
-    rc=$?
+    stderr_file=$(mktemp)
+    echo "execute: $@" > /dev/kmsg
+    (exec "$@") | tee /dev/kmsg 2>${stderr_file}
+    rc=${PIPESTATUS[0]}
     [ -s ${stderr_file} ] && cat ${stderr_file} | tee /dev/kmsg >/dev/stderr
     rm ${stderr_file}
     return $rc
 }
 
 function info_func() {
-    stderr_file=$(mktemp /tmp/run-stderr.XXXXXXXX)
-    ("$@" | tee /dev/kmsg 2>${stderr_file}; return ${PIPESTATUS[0]})
-    rc=$?
+    stderr_file=$(mktemp)
+    echo "func: $@" > /dev/kmsg
+    ("$@") | tee /dev/kmsg 2>${stderr_file}
+    rc=${PIPESTATUS[0]}
     [ -s ${stderr_file} ] && cat ${stderr_file} | tee /dev/kmsg >/dev/stderr
     rm ${stderr_file}
     return $rc
