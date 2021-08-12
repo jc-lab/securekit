@@ -103,7 +103,7 @@ ADD "opt/" "/out/opt/"
 RUN rm -rf /out/etc/apk /out/lib/apk /out/var/cache && \
     rm -rf /out/usr/share && \
     rm -rf /out/usr/include && \
-    find /out/opt/securekit/ -type f -name "*.sh" | grep 'bin/' | xargs chmod 555
+    find /out/opt/securekit/ -type f | grep 'bin/' | xargs chmod 555
 
 FROM scratch
 ENTRYPOINT []
