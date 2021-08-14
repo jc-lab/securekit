@@ -23,6 +23,6 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build Packages
         run: |
-           build/linuxkit pkg push -disable-content-trust -network -org jclab pkg/securekit-sftpd
+           build/linuxkit pkg push -disable-content-trust -network -org jclab pkg/securekit-sshd
            build/linuxkit pkg push -disable-content-trust -network -org jclab pkg/securekit-disk
 

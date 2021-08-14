@@ -30,12 +30,10 @@ onboot:
     binds:
       - /dev:/dev
       - /var:/var
-      - /root/.ssh/authorized_keys:/manager_authorized_keys:ro
       - /fs_protector_key.public.asc:/fs_protector_key.public.asc:ro
-      - /tpm-issuers.pem:/tpm-issuers.pem:ro
   # NEEDED FOR KEY BACKUP
-  - name: init-sftpd
-    image: jclab/securekit-sftpd:latest
+  - name: init-sshd
+    image: jclab/securekit-sshd:latest
     command: ["/usr/bin/init-ssh.sh", "/var/storage"]
     binds:
       - /var/storage:/var/storage
@@ -57,21 +55,16 @@ services:
     image: linuxkit/dhcpcd:1033f340e2d42f86a60aab70752346f0045ea388
     
   # NEEDED FOR KEY BACKUP
-  - name: sftpd
-    image: jclab/securekit-sftpd:latest
+  - name: sshd
+    image: jclab/securekit-sshd:latest
     binds:
       - /etc/resolv.conf:/etc/resolv.conf:ro
       - /var/storage/etc/ssh:/etc/ssh:ro
-      - /root/.ssh:/root/.ssh
-      - /var/log:/root/log:ro
-      - /var/boot:/root/boot:ro
-    capabilities:
-      - CAP_NET_BIND_SERVICE
-      - CAP_SYS_CHROOT
-      - CAP_SETGID
-      - CAP_SETUID
-      - CAP_CHOWN
-
+      - /home/manager/.ssh/authorized_keys:/home/manager/.ssh/authorized_keys
+      - /var/log:/home/manager/log:ro
+      - /var/boot:/home/manager/boot:ro
+    env:
+      - ONLY_SFTP=no
   - name: getty
     image: linuxkit/getty:ed32c71531f5998aa510847bb07bd847492d4101
     env:
@@ -92,19 +85,19 @@ services:
       - /var:/var
 files:
   # SSH PUBLIC KEY FOR KEY BACKUP TO REMOTE
-  - path: /root/.ssh/authorized_keys
+  - path: /home/manager/.ssh
+    directory: true
+  - path: /home/manager/.ssh/authorized_keys
     source: authorized_keys
     mode: "0400"
     optional: false
+    gid: 1002
+    uid: 1002
   # PGP FS_PROTECTOR_KEY FOR KEY BACKUP TO LOCAL
   - path: /fs_protector_key.public.asc
     source: fs_protector_key.public.asc
     mode: "0400"
     optional: false
-  - path: /tpm-issuers.pem
-    source: tpm-issuers.pem
-    mode: "0444"
-    optional: true
 #trust:
 #  org:
 #    - linuxkit

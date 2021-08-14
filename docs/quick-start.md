@@ -22,7 +22,7 @@ $ cp scripts/efi-sign.sh.in scripts/efi-sign.sh
 ### 4. Build linuxkit image
 
 ```bash
-$ linuxkit pkg build -network -org jclab pkg/securekit-sftpd
+$ linuxkit pkg build -network -org jclab pkg/securekit-sshd
 $ linuxkit pkg build -network -org jclab pkg/securekit-disk
 
 $ cd example

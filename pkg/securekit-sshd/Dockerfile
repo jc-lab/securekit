@@ -7,7 +7,8 @@ RUN apk add --no-cache --initdb -p /out  \
     musl \
     tini \
     util-linux \
-    zlib openssl
+    zlib openssl \
+    bash
 
 # Remove apk residuals
 RUN rm -rf /out/etc/apk /out/lib/apk /out/var/cache
@@ -62,7 +63,11 @@ COPY --from=mirror /out/ /
 COPY --from=builder /out/ /
 COPY etc/ /etc/
 COPY usr/ /usr/
-RUN mkdir -p /etc/ssh /root/.ssh /var/empty && \
-    chmod +x /usr/bin/*.sh && \
-    chmod 0700 /root/.ssh
+RUN adduser -u 1002 -s /bin/bash -D manager && \
+    mkdir -m 700 -p /home/manager/.ssh && \
+    chown manager:manager -R /home/manager && \
+    chmod 700 /home/manager && \
+    mkdir -p /etc/ssh /var/empty && \
+    chmod +x /usr/bin/*.sh
+
 CMD ["/sbin/tini", "/usr/bin/ssh.sh"]
