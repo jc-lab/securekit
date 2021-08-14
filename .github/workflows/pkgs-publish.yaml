@@ -1,8 +1,8 @@
 name: pkgs publish
 on:
-  release:
-    types:
-      - created
+  push:
+    tags:
+      - "v*"
 jobs:
   push_to_registry:
     name: build linuxkit package
@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Istall linuxkit
+      - name: Install linuxkit
         run: mkdir -p build && curl -L -o build/linuxkit https://github.com/linuxkit/linuxkit/releases/download/v0.8/linuxkit-linux-amd64 && chmod +x build/linuxkit
       - name: Set env
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/v}" >> $GITHUB_ENV
@@ -25,4 +25,10 @@ jobs:
         run: |
            build/linuxkit pkg push -disable-content-trust -network -org jclab pkg/securekit-sshd
            build/linuxkit pkg push -disable-content-trust -network -org jclab pkg/securekit-disk
+           touch build/release-note.txt
+           echo "* $(build/linuxkit pkg show-tag -org jclab pkg/securekit-sshd)" >> build/release-note.txt
+           echo "* $(build/linuxkit pkg show-tag -org jclab pkg/securekit-disk)" >> build/release-note.txt
+      - name: Release Note
+        with:
+          body_path: build/release-note.txt
 
