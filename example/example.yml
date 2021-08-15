@@ -65,6 +65,10 @@ services:
       - /var/boot:/home/manager/boot:ro
     env:
       - ONLY_SFTP=no
+
+  - name: log2console
+    image: jclab/securekit-log2console:latest
+
   - name: getty
     image: linuxkit/getty:ed32c71531f5998aa510847bb07bd847492d4101
     env:
