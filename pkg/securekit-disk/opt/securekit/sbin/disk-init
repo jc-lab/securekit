@@ -12,6 +12,8 @@ partition_style="o"
 storage_mount_dir=""
 meta_mount_dir=""
 
+mkdir_list=()
+
 while [ $# -gt 0 ]; do
     case "$1" in
         --name)
@@ -35,6 +37,10 @@ while [ $# -gt 0 ]; do
         --mount-meta)
             shift
             meta_mount_dir="$1"
+            ;;
+        --mkdir)
+            shift
+            mkdir_list+=("$1")
             ;;
       *)
             >&2 info "invalid argument: $*"
@@ -215,6 +221,19 @@ if [ -z "${meta_mount_dir}" ]; then
 else
    info_execute mount -o remount,ro ${meta_mount_dir}
 fi
+
+sync
+
+for item in "${mkdir_list[@]}"; do
+    [ -n "$item" ] || continue
+    opts="-p"
+    path="$(echo $item | cut -d':' -f1 -s)"
+    perm=""
+    [ -z "$path" ] && path="$item" || perm=$(echo "$item" | cut -d':' -f2 -s)
+    [ -z "$perm" ] || opts="$opts -m $perm"
+    echo mkdir $opts "$path" > /dev/kmsg
+    mkdir $opts "$path"
+done
 
 sync
 

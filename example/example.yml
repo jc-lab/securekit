@@ -26,17 +26,11 @@ onboot:
   # NEEDED FOR FORMAT or MOUNT
   - name: format
     image: jclab/securekit-disk:latest
-    command: ["/opt/securekit/sbin/disk-init", "/dev/sda", "--name", "storage", "--mbr", "--mount", "/var/storage", "--mount-meta", "/var/boot"]
+    command: ["/opt/securekit/sbin/disk-init", "/dev/sda", "--name", "storage", "--mbr", "--mount", "/var/storage", "--mount-meta", "/var/boot", "--mkdir", "/var/storage/ssh", "--mkdir", "/var/storage/test:777"]
     binds:
       - /dev:/dev
       - /var:/var
       - /fs_protector_key.public.asc:/fs_protector_key.public.asc:ro
-  # NEEDED FOR KEY BACKUP
-  - name: init-sshd
-    image: jclab/securekit-sshd:latest
-    command: ["/usr/bin/init-ssh.sh", "/var/storage"]
-    binds:
-      - /var/storage:/var/storage
   # ========== REQUIRED FOR SECUREKIT END ==========
 onshutdown:
   # ========== REQUIRED FOR SECUREKIT ==========
@@ -59,7 +53,7 @@ services:
     image: jclab/securekit-sshd:latest
     binds:
       - /etc/resolv.conf:/etc/resolv.conf:ro
-      - /var/storage/etc/ssh:/etc/ssh:ro
+      - /var/storage/ssh:/etc/ssh
       - /home/manager/.ssh/authorized_keys:/home/manager/.ssh/authorized_keys
       - /var/log:/home/manager/log:ro
       - /var/boot:/home/manager/boot:ro
