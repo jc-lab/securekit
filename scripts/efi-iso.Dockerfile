@@ -10,7 +10,7 @@ COPY ["${IMAGE_NAME}-linux.efi", "/work/"]
 
 RUN mkdir -p /work/iso/boot && \
     efi_file_size=$(stat -c %s "/work/${IMAGE_NAME}-linux.efi") && \
-    efi_part_size=$((efi_file_size / 1024 / 1024 + 4)) && \
+    efi_part_size=$((efi_file_size / 1024 / 1024 + 32)) && \
     dd if=/dev/zero of=/work/iso/boot/efiboot.img bs=1M count=${efi_part_size} && \
     mkfs.vfat /work/iso/boot/efiboot.img && \
     mmd -i /work/iso/boot/efiboot.img efi efi/boot && \
