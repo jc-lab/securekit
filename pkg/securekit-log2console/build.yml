@@ -1,0 +1,8 @@
+image: securekit-log2console
+config:
+  binds:
+    - /etc/resolv.conf:/etc/resolv.conf:ro
+    - /var/log:/var/log:ro
+    - /run/log:/run/log:ro
+    - /dev:/dev
+

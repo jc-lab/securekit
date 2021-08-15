@@ -25,9 +25,11 @@ jobs:
         run: |
            build/linuxkit pkg push -disable-content-trust -network -org jclab pkg/securekit-sshd
            build/linuxkit pkg push -disable-content-trust -network -org jclab pkg/securekit-disk
+           build/linuxkit pkg push -disable-content-trust -org jclab pkg/securekit-log2console
            touch build/release-note.txt
            echo "* $(build/linuxkit pkg show-tag -org jclab pkg/securekit-sshd)" >> build/release-note.txt
            echo "* $(build/linuxkit pkg show-tag -org jclab pkg/securekit-disk)" >> build/release-note.txt
+           echo "* $(build/linuxkit pkg show-tag -org jclab pkg/securekit-log2console)" >> build/release-note.txt
       - name: Release Note
         uses: softprops/action-gh-release@v1
         with:

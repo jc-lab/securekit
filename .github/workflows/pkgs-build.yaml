@@ -17,4 +17,5 @@ jobs:
         run: |
            build/linuxkit pkg build -network -org jclab pkg/securekit-sshd
            build/linuxkit pkg build -network -org jclab pkg/securekit-disk
+           build/linuxkit pkg build -org jclab pkg/securekit-log2console
 
