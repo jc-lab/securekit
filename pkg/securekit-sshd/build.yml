@@ -1,5 +1,6 @@
 image: securekit-sshd
 config:
+  pid: host
   binds:
     - /etc/resolv.conf:/etc/resolv.conf:ro
   capabilities:
@@ -10,4 +11,5 @@ config:
     - CAP_CHOWN
     - CAP_DAC_OVERRIDE
     - CAP_KILL
+    - CAP_SYS_BOOT
 
